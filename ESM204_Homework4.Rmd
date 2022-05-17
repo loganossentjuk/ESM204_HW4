@@ -1,0 +1,65 @@
+---
+title: "ESM204_HW4"
+output: html_document
+date: '2022-05-16'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(here)
+library(janitor)
+library(tidyverse)
+```
+
+```{r}
+damage_df <- read_csv(here("data", "damages.csv")) %>% 
+  clean_names()
+warming_df <- read_csv(here('data', 'warming.csv')) %>% 
+  clean_names() %>% 
+  select(-x1)
+``` 
+
+1. Using damages.csv, estimate a quadratic damage function relating the dollar value of damages
+to the change in global mean temperature. Estimate a model with a zero intercept because
+damages by construction must equal zero when there is no climate change. Plot your estimated
+damage function, overlaid with a scatterplot of the underlying data.*
+
+```{r}
+model<- lm(damages ~ warming + warming^2 -1, data = damage)
+
+pred_damages <- model$fitted.values
+#pred_damages2 <- predict(model, newdata = seq(0.1, 10, length.out = 100))
+
+prediction <- predict(model)
+
+ggplot() +
+  geom_point(data = damage_df, aes(x = warming, y = damages)) +
+  #geom_abline(data = pred_damages) +
+  geom_abline(mapping = aes(x = warming_df, y = pred_damages), intercept = 0, slope = model$coefficients) #this is wrong but good enough for now 
+  theme_classic()
+
+
+
+```
+
+
+2. Use warming.csv and your estimated damage function to predict damages in each year under
+the baseline climate and the pulse scenario. Make four plots: (1) damages over time without
+the pulse, (2) damages over time with the pulse, (3) the difference in damages over time that
+arises from the pulse, and (4) the difference in damages over time from the pulse per ton of
+CO2 (you can assume that each ton of the pulse causes the same amount of damage).
+
+
+
+
+3. The SCC is the present discounted value of the stream of future damages caused by one
+additional ton of CO2. The Obama Administration used a discount rate of 3% to discount
+damages. Recently, New York State used a discount rate of 2%. Calculate and make a plot
+of the SCC (y-axis) against the discount rate (x-axis) for a reasonable range of discount rates.
+Explain the intuition for how the discount rate affects the SCC.
+
+4. The National Academies of Sciences, Engineering, and Medicine advised the government in a
+2017 report to use the Ramsey Rule when discounting within the SCC calculation:
+r = p + ng
+Using p = 0:001, n = 2, and g = 0:01, what is the SCC? Locate this point on your graph from
+above.
