@@ -24,18 +24,22 @@ to the change in global mean temperature. Estimate a model with a zero intercept
 damages by construction must equal zero when there is no climate change. Plot your estimated
 damage function, overlaid with a scatterplot of the underlying data.*
 
-```{r}
-model<- lm(damages ~ warming + warming^2 -1, data = damage)
+```{r} 
+damage_df$warming_sq <- damage_df$warming^2
+
+model<- lm(damages ~ 0 + warming + warming_sq, data = damage_df)
 
 pred_damages <- model$fitted.values
 #pred_damages2 <- predict(model, newdata = seq(0.1, 10, length.out = 100))
 
 prediction <- predict(model)
 
-ggplot() +
-  geom_point(data = damage_df, aes(x = warming, y = damages)) +
-  #geom_abline(data = pred_damages) +
-  geom_abline(mapping = aes(x = warming_df, y = pred_damages), intercept = 0, slope = model$coefficients) #this is wrong but good enough for now 
+damage_df <- damage_df %>% 
+  mutate(predicted_damage = prediction)
+
+ggplot(data = damage_df) +
+  geom_point(aes(x = warming, y = damages)) +
+  geom_line(aes(x = warming, y = predicted_damage)) #this is wrong but good enough for now 
   theme_classic()
 
 
