@@ -27,23 +27,22 @@ damage function, overlaid with a scatterplot of the underlying data.*
 ```{r} 
 damage_df$warming_sq <- damage_df$warming^2
 
-model<- lm(damages ~ 0 + warming + warming_sq, data = damage_df)
+damage_lm<- lm(damages ~ 0 + warming + warming_sq, data = damage_df)
 
-pred_damages <- model$fitted.values
+pred_damages <- damage_lm$fitted.values
 #pred_damages2 <- predict(model, newdata = seq(0.1, 10, length.out = 100))
 
-prediction <- predict(model)
+prediction <- predict(damage_lm)
 
 damage_df <- damage_df %>% 
   mutate(predicted_damage = prediction)
+```
 
+```{r}
 ggplot(data = damage_df) +
   geom_point(aes(x = warming, y = damages)) +
   geom_line(aes(x = warming, y = predicted_damage)) #this is wrong but good enough for now 
   theme_classic()
-
-
-
 ```
 
 
@@ -52,6 +51,10 @@ the baseline climate and the pulse scenario. Make four plots: (1) damages over t
 the pulse, (2) damages over time with the pulse, (3) the difference in damages over time that
 arises from the pulse, and (4) the difference in damages over time from the pulse per ton of
 CO2 (you can assume that each ton of the pulse causes the same amount of damage).
+
+```{r}
+
+```
 
 
 

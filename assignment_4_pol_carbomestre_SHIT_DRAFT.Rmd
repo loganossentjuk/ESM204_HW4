@@ -1,0 +1,293 @@
+---
+title: |
+  | \vspace{-1.1 cm} ESM 204 | Economics of Environmental Management: \vspace{-0.5cm}
+subtitle: |
+  | \vspace{0.6 cm} Assignment 4: Calculating the SCC and policy choice under uncertainty \vspace{0cm}
+author: |
+  | \vspace{0 cm} *Pol Carbó Mestre* \vspace{-1.1cm}
+date: | 
+  | \vspace{-0.2 cm} *`r format(Sys.Date(),"On %B %e, %Y")`*  \vspace{-0.7cm}
+header-includes:
+      \usepackage{tocloft}
+      \setlength\cftparskip{0pt}
+      \setlength\cftbeforesecskip{5pt}
+      \setlength\cftaftertoctitleskip{2pt}
+output:
+  pdf_document:
+    latex_engine: xelatex
+    toc: false
+    toc_depth: 3
+    extra_dependencies: ["flafter"]
+  html_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+\
+\
+*NO FUCKING IDEA ABOUT WHAT I AM DOING. I HAVE TO READ THE CLASS NOTES AND UNDERSTAND THE CONCEPTS. SO FAR I HAVE JUST USED MATHS AND SOME CODING TO SOLVE BASE ON THE LIMITED KNOWLEDGE I HAVE ABOUT THE CONCEPS AND THE MATHEMATICAL DEFINITION THAT DESCRIVE THEM*
+
+*I HOPE THE CODE HELPS U AT LEAST*
+
+
+**In this homework, you will use new estimates of the future impacts of climate change to inform an update to the SCC. We recommend using R and writing functions to compute your answers wherever possible.**
+
+**Gauchospace houses two datasets. The first, “damages.csv” provides new model estimates of the annual total damages from climate change at different levels of warming (in degrees C). The second dataset, “warming.csv” contains estimates of a baseline future climate trajectory (in degrees C) until 2100, and a second trajectory that adds a one-time pulse of CO2 today to the atmosphere. The pulse is 35 billion tons of carbon, which is roughly equal to annual global emissions. You can think of this as a “small” one-time pulse in carbon emissions**
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = F, warning = F)
+
+library(tidyverse)
+library(janitor)
+library(here)
+library(patchwork)
+library(ggtext)
+```
+
+\
+
+
+# Question 1
+
+*Damages is in ($/degree C)? so we are representing D over C?*
+
+**Using damages.csv, estimate a quadratic damage function relating the dollar value of damages to the change in global mean temperature. Estimate a model with a zero intercept because damages by construction must equal zero when there is no climate change. Plot your estimated damage function, overlaid with a scatterplot of the underlying data.**
+
+
+```{r}
+damages_df <- read_csv(here("data","damages.csv")) %>% 
+  clean_names() %>% 
+  # Adding an extra column with the warming values to the power of two
+  # to fit the quadratic regression
+  mutate(warming2 = warming^2) 
+
+quadratic.model <-lm(damages ~ 0 + warming + warming2, damages_df)
+
+quadratic.fun <- function(x) {
+  quadratic.model$coef[1]*x + quadratic.model$coef[2]*x^2
+}
+```
+
+```{r, out.width='70%', fig.align='center', echo=F}
+ggplot(damages_df, aes(x=warming, y=damages)) +
+  geom_point(color="grey",alpha=0.6,size=1) +
+  stat_function(fun = quadratic.fun, size = 1) +
+  theme_classic() +
+  scale_x_continuous(name="Degrees Celcius") +
+  scale_y_continuous(name="Damages ($)") +
+theme(legend.title = element_blank(),
+        legend.position = c(0.95, 0.95), 
+        legend.justification = c(1, 1),
+        legend.spacing = unit(0, "cm"), 
+        legend.margin = margin(0, 0, 0, 0, "cm"))
+```
+
+
+# Question 2
+
+*Do we represent without fiting a regresion line? Just ploting the valies?*
+
+**Use warming.csv and your estimated damage function to predict damages in each year under the baseline climate and the pulse scenario. Make four plots: (1) damages over time without the pulse, (2) damages over time with the pulse, (3) the difference in damages over time that arises from the pulse, and (4) the difference in damages over time from the pulse per ton of CO2 (you can assume that each ton of the pulse causes the same amount of damage).**
+
+- **Damages over time without the pulse:**
+
+```{r}
+warming_df <- read_csv(here("data","warming.csv")) %>% 
+  clean_names() %>% 
+  mutate(damages_baseline = quadratic.fun(warming_baseline),
+         damages_pulse = quadratic.fun(warming_pulse)) %>% 
+  mutate(damage_difference = damages_pulse - damages_baseline) %>% 
+  mutate(damage_difference_ToC = damage_difference/35e9)
+```
+
+
+```{r, echo = F}
+p1 <- ggplot(warming_df, aes(x=year, y=damages_baseline)) +
+  geom_line(color="grey",alpha=0.6,size=1) +
+  theme_classic() +
+  scale_x_continuous(name="Year") +
+  scale_y_continuous(name="Damages ($)") +
+theme(legend.title = element_blank(),
+        legend.position = c(0.95, 0.95), 
+        legend.justification = c(1, 1),
+        legend.spacing = unit(0, "cm"), 
+        legend.margin = margin(0, 0, 0, 0, "cm")) 
+
+p2 <- ggplot(warming_df, aes(x=year, y=damages_pulse)) +
+  geom_line(color="grey",alpha=0.6,size=1) +
+  theme_classic() +
+  scale_x_continuous(name="Year") +
+  scale_y_continuous(name="Damages ($)") +
+theme(legend.title = element_blank(),
+        legend.position = c(0.95, 0.95), 
+        legend.justification = c(1, 1),
+        legend.spacing = unit(0, "cm"), 
+        legend.margin = margin(0, 0, 0, 0, "cm")) 
+
+p3 <- ggplot(warming_df, aes(x=year, y=damage_difference)) +
+  geom_line(color="grey",alpha=0.6,size=1) +
+  theme_classic() +
+  scale_x_continuous(name="Year") +
+  scale_y_continuous(name="Damage ($)") +
+theme(legend.title = element_blank(),
+        legend.position = c(0.95, 0.95), 
+        legend.justification = c(1, 1),
+        legend.spacing = unit(0, "cm"), 
+        legend.margin = margin(0, 0, 0, 0, "cm")) 
+
+p4 <- ggplot(warming_df, aes(x=year, y=damage_difference_ToC)) +
+  geom_line(color="grey",alpha=0.6,size=1) +
+  theme_classic() +
+  scale_x_continuous(name="Year") +
+  scale_y_continuous(name="$ / tons of CO2") +
+theme(legend.title = element_blank(),
+        legend.position = c(0.95, 0.95), 
+        legend.justification = c(1, 1),
+        legend.spacing = unit(0, "cm"), 
+        legend.margin = margin(0, 0, 0, 0, "cm"))
+
+patchwork <- (p1 | p2) / (p3 | p4)
+
+
+patchwork + plot_annotation(
+  tag_levels = 'A',
+  caption = 'Figure 1. (A) damages over time without the pulse, (B) Damages over time with the pulse, (C) difference in damages over time that arises from the pulse, (D) difference in damages over time from the pulse per ton of carbon dioxide',
+  theme = theme(plot.caption = element_textbox_simple(margin = margin(10,0,0,0)),
+        plot.caption.position = "plot"))
+```
+
+
+
+# Question 3
+
+*using baseline or pulse? this refers to the difference right?*
+
+**The SCC is the present discounted value of the stream of future damages caused by one additional ton of $CO_2$. The Obama Administration used a discount rate of 3% to discount damages. Recently, New York State used a discount rate of 2%. Calculate and make a plot of the SCC (y-axis) against the discount rate (x-axis) for a reasonable range of discount rates. Explain the intuition for how the discount rate affects the SCC.**
+
+
+```{r}
+pdv <- function(fv,r) {
+  sum(fv/((1+r)^c(1:length(fv))))
+}
+
+fv <- warming_df$damage_diference
+r <- seq(0,0.2,0.005)
+pdv_val <- numeric()
+
+
+for(i in 1:length(r)) {
+  pdv_val[i] <- pdv(fv,r[i])
+}
+```
+
+
+```{r, out.width='70%', fig.align='center', echo=F}
+ggplot(data.frame(),aes(x=r, y=pdv_val)) +
+  geom_line(color="grey",alpha=0.6,size=1) +
+  theme_classic() +
+  scale_x_continuous(name="discount rate") +
+  scale_y_continuous(name="SCC") +
+theme(legend.title = element_blank(),
+        legend.position = c(0.95, 0.95), 
+        legend.justification = c(1, 1),
+        legend.spacing = unit(0, "cm"), 
+        legend.margin = margin(0, 0, 0, 0, "cm"))
+```
+
+
+# Question 4
+
+**The National Academies of Sciences, Engineering, and Medicine advised the government in a 2017 report to use the Ramsey Rule when discounting within the SCC calculation:**
+
+\[r= \rho + \eta g \]
+
+**Using $\rho = 0.001$, $\eta = 2$, and $g = 0.01$, what is the SCC? Locate this point on your graph from above.**
+
+```{r}
+rate <- 0.001 + 2*0.01
+scc <- pdv(fv,rate)
+```
+
+```{r, out.width='70%', fig.align='center', echo=F}
+ggplot(data.frame(),aes(x=r, y=pdv_val)) +
+  geom_line(color="grey",alpha=0.6,size=1) +
+  annotate("segment", x = 0, y = scc, xend = rate, yend = scc,
+           linetype = "dashed", color = "grey") +
+  annotate("segment", x = rate, y = scc, xend = rate, yend = 0,
+           linetype = "dashed", color = "grey") +
+  annotate("point", y = scc, x= rate, color = "grey10", size= 1.5) +
+  theme_classic() +
+  scale_x_continuous(name="discount rate") +
+  scale_y_continuous(name="SCC") +
+theme(legend.title = element_blank(),
+        legend.position = c(0.95, 0.95), 
+        legend.justification = c(1, 1),
+        legend.spacing = unit(0, "cm"), 
+        legend.margin = margin(0, 0, 0, 0, "cm"))
+```
+
+
+
+# Question 5
+
+**Now suppose there are two possible climate policies that can be pursued. Policy A is business as usual and Policy B is to take immediate and strong action on climate change. Use these facts**
+
+- If you undertake Policy A there are two possible outcomes. Either warming will occur as in the “baseline” (i.e. “no-pulse”) dataset above (this happens with probability 0.5) or warming each year will be 1.5 times that in the “baseline” dataset (with probability 0.5).
+
+- Under Policy B, warming will continue until 2050 as in the “baseline” dataset, and then will stabilize at 1.29 degrees and stay that way forever.
+
+```{r}
+policy_b <- numeric()
+for (i in 1:nrow(warming_df)) {
+  if (warming_df$year[i] < 2050) {
+    policy_b[i] <- warming_df$warming_baseline[i]
+    } else {
+      policy_b[i] <- 1.29
+    }
+  }
+
+policy_a1 <-  warming_df$warming_baseline
+policy_a2 <- warming_df$warming_baseline*1.5
+
+climate_scenarios <- cbind(year = warming_df$year,
+                           policy_a1 = warming_df$warming_baseline,
+                           policy_a2 = warming_df$warming_baseline*1.5,
+                           policy_b)
+```
+
+- Society is risk neutral
+
+- Use a discount rate of 2%
+
+**What is the expected present value of damages up to 2100 under Policy A? What is the expected present value of damages up to 2100 under Policy B? Suppose undertaking Policy A costs zero and undertaking Policy B costs X. The total cost of a policy is the implementation cost plus expected damages. Make a plot of total cost of Policy A and total cost of Policy B against X. Suppose Congress wants to undertake the policy with the lower total cost. Use your graph to advise Congress.**
+
+*but policy cost A is constant and policy B will have a linerar relationship. Does have any sense graphing?*
+*I don't understandwhat this cost refers about*
+
+```{r}
+# Expected present value of damages up to 2100 under Policy A.1
+pv_a1 <- pdv(quadratic.fun(policy_a1),0.02)
+# Expected present value of damages up to 2100 under Policy A.2
+pv_a2 <- pdv(quadratic.fun(policy_a2),0.02)
+# Expected present value of damages up to 2100 under Policy B
+pv_b <- pdv(quadratic.fun(policy_b),0.02)
+```
+
+```{r, out.width='70%', fig.align='center', echo=F}
+cost_x <- seq(1e10,5e15,1e11)
+
+ggplot(data.frame(),aes(x=cost_x, y=cost_x+pv_b)) +
+  geom_line(aes(color="Policy B"),alpha=0.6,size=1) +
+  geom_hline(yintercept=pv_a1, color="grey") +
+  geom_hline(yintercept=pv_a2, color="grey") +
+  theme_classic() +
+  scale_x_continuous(name="Implementation cost X ($)") +
+  scale_y_continuous(name="Expected damages ($)") +
+theme(legend.title = element_blank(),
+        legend.position = c(0.3, 0.95), 
+        legend.justification = c(1, 1),
+        legend.spacing = unit(0, "cm"), 
+        legend.margin = margin(0, 0, 0, 0, "cm"))
+```
+
